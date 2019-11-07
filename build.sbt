@@ -2,7 +2,7 @@ name := "WalaUtil"
 
 version := "0.1-SNAPSHOT"
 
-organization := "University of Colorado Boulder"
+organization := "edu.colorado.plv"
 
 scalaVersion := "2.10.2"
 
