@@ -43,7 +43,7 @@ object IRUtil {
   def makeIR(m : IMethod, analysisCache : Option[AnalysisCache] = None) : IR = {
     val cache = analysisCache match {
       case Some(analysisCache) => analysisCache
-      case None => new AnalysisCache
+      case None => ??? //new AnalysisCache
     }
     cache.getSSACache().findOrCreateIR(m, Everywhere.EVERYWHERE, SSAOptions.defaultOptions()) 
   }
@@ -118,10 +118,10 @@ object IRUtil {
     mkInstr(default, fld.getReference())
   }
   
-  def getSourceLine(bcIndex : Int, m : IBytecodeMethod) : Int = m.getLineNumber(bcIndex)  
+  def getSourceLine[IType](bcIndex : Int, m : IBytecodeMethod[IType]) : Int = m.getLineNumber(bcIndex)  
   
-  def getSourceLine(i : SSAInstruction, ir : IR) : Int = ir.getMethod() match {
-    case m : IBytecodeMethod => 
+  def getSourceLine[IType](i : SSAInstruction, ir : IR) : Int = ir.getMethod() match {
+    case m : IBytecodeMethod[IType] => 
       val instrIndex = ir.getInstructions().indexOf(i)
       if (instrIndex >= 0) {
         val bcIndex = m.getBytecodeIndex(instrIndex)
