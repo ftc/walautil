@@ -1,11 +1,10 @@
 package edu.colorado.walautil
 
-import scala.collection.mutable.SetLike
 import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.LinkedHashSet
 import scala.collection.immutable.ListSet
 import scala.compat.Platform
-import scala.collection.mutable.MutableList
+import scala.collection.mutable.ListBuffer
 import com.ibm.wala.shrikeBT.IConditionalBranchInstruction.Operator._
 import com.ibm.wala.shrikeBT.BinaryOpInstruction
 import Types._
@@ -24,7 +23,7 @@ object Util {
   def Require(b : Boolean) : Unit = Assert(b, "")
   
   /** data structures */
-  def makeList[T] = new MutableList[T]
+  def makeList[T] = new ListBuffer[T]
   // return mutable sets/maps with deterministic iteration order
   def makeSet[T] = new LinkedHashSet[T]
   def makeMap[K,V] : MMap[K,V]  = new LinkedHashMap[K,V]  

@@ -2,7 +2,7 @@ package edu.colorado.walautil
 
 import com.ibm.wala.util.graph.impl.BasicNodeManager
 import com.ibm.wala.util.graph.{AbstractGraph, EdgeManager}
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 
 /** simple adjacency set implementation of WALA graph interface. this has wasteful memory usage but fast lookups of
   * successor and predecessor nodes */
@@ -59,12 +59,12 @@ final class GraphImpl[T](val root : Option[T] = None) extends AbstractGraph[T]()
   override def getNodeManager = nodeManager
   override def getEdgeManager = edgeManager
 
-  def nodes() : Iterable[T] = nodeManager.iterator().toIterable
+  def nodes() : Iterable[T] = nodeManager.asScala
 
   def edges() : Iterable[(T,T)] =
-    succMap.foldLeft (List.empty[(T,T)]) ((l, entry) => {
+    succMap.asScala.foldLeft (List.empty[(T,T)]) ((l, entry) => {
       val src = entry._1
-      entry._2.foldLeft (l) ((l, snk) => (src, snk) :: l)
+      entry._2.asScala.foldLeft (l) ((l, snk) => (src, snk) :: l)
     })
 
 }

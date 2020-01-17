@@ -2,8 +2,7 @@ package edu.colorado.walautil
 
 import edu.colorado.walautil.Types.{WalaBlock, MSet}
 
-import scala.collection.JavaConversions.collectionAsScalaIterable
-import scala.collection.JavaConversions.iterableAsScalaIterable
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.HashMap
 import com.ibm.wala.ssa.IR
 import com.ibm.wala.ssa.SSACFG
@@ -45,7 +44,7 @@ object LoopUtil {
       val doLoops = Util.makeSet[Int]
       def computeLoopHeaders(ir : IR) : Set[Int]= {
         val cfg = ir.getControlFlowGraph()
-        val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry())
+        val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry()).asScala
         val domInfo = getDominators(ir)
         backEdges.foldLeft (Set.empty[Int]) ((s : Set[Int], p : IntPair) => {
           val (src, dst) = (cfg.getNode(p.getX()), cfg.getNode(p.getY()))
@@ -119,7 +118,7 @@ object LoopUtil {
       require(isLoopHeader(header, ir))
       val headerNum = header.getNumber()
       val cfg =  ir.getControlFlowGraph()
-      val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry())
+      val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry()).asScala
       val srcs = backEdges.collect({case intPair if intPair.getY() == headerNum => cfg.getBasicBlock(intPair.getX())})
       assert(!srcs.isEmpty)
       srcs.toList
@@ -139,7 +138,7 @@ object LoopUtil {
     getLoopBody(loopHeader, ir.getControlFlowGraph)
 
   def getLoopBody(loopHeader : ISSABasicBlock, cfg : SSACFG) : Set[ISSABasicBlock] = {
-    val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry())
+    val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry()).asScala
     val headerNum = loopHeader.getNumber
     backEdges.foldLeft (Set(loopHeader)) ((s, pair) => {
       if (pair.getY == headerNum) {
@@ -181,7 +180,7 @@ object LoopUtil {
       var last : WalaBlock = null
       var forLoop = false
       if (isDoWhileLoop(loopHeader, ir)) {
-        val preds = cfg.getNormalPredecessors(loopHeader)
+        val preds = cfg.getNormalPredecessors(loopHeader).asScala
         val condPreds = preds.collect({case b if (CFGUtil.endsWithConditionalInstr(b)) => b})
         if (!condPreds.isEmpty) {
           val maxCond = condPreds.maxBy(blk => blk.getNumber())
@@ -214,7 +213,7 @@ object LoopUtil {
             case succs if succs.size() == 1 => true
             case succs if succs.size() == 2 =>
               // if one of the succs of this is lower in the cfg than the loop tail, it is the loop conditional block. else, it's an explicitly infinite loop
-              if (succs.maxBy(blk => blk.getNumber()).getNumber() > tailBlkNum) {
+              if (succs.asScala.maxBy(blk => blk.getNumber()).getNumber() > tailBlkNum) {
                 last = blk
                 false
               } else true

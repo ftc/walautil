@@ -1,6 +1,6 @@
 package edu.colorado.walautil
 
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 import com.ibm.wala.types.FieldReference
 import com.ibm.wala.ssa.SSAPutInstruction
 import com.ibm.wala.ssa.IR
@@ -63,7 +63,7 @@ object IRUtil {
     if (ir == null) List.empty[SSAInstruction]
     else {
       val method = node.getMethod()
-      val regInstrs = ir.iterateAllInstructions().toList
+      val regInstrs = ir.iterateAllInstructions().asScala.toList
       if (method.isInit()) addDefaultValueAssignmentsForInstanceFields(regInstrs, ir)
       else if (method.isClinit()) addDefaultValueAssignmentsForStaticFields(regInstrs, ir)
       else regInstrs
@@ -80,7 +80,7 @@ object IRUtil {
     val tbl = ir.getSymbolTable()
     def mkInstr (valu : Int, ref : FieldReference) : SSAPutInstruction =
       factory.PutInstruction(getDummyIndex(), thisVar, valu, ref)
-    ir.getMethod().getDeclaringClass().getDeclaredInstanceFields().foldLeft (instrs) ((instrs, fld) =>
+    ir.getMethod().getDeclaringClass().getDeclaredInstanceFields().asScala.foldLeft (instrs) ((instrs, fld) =>
       getDefaultAssignment(fld, tbl, mkInstr) :: instrs)
   }
   
@@ -89,7 +89,7 @@ object IRUtil {
     val tbl = ir.getSymbolTable()
     def mkInstr (valu : Int, ref : FieldReference) : SSAPutInstruction =
       factory.PutInstruction(getDummyIndex(), valu, ref)
-    ir.getMethod().getDeclaringClass().getAllStaticFields().foldLeft (instrs) ((instrs, fld) =>
+    ir.getMethod().getDeclaringClass().getAllStaticFields().asScala.foldLeft (instrs) ((instrs, fld) =>
       getDefaultAssignment(fld, tbl, mkInstr) :: instrs)
   }
   

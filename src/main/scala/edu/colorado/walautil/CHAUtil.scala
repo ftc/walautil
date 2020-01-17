@@ -1,6 +1,6 @@
 package edu.colorado.walautil
 
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 import com.ibm.wala.classLoader.IMethod
 import com.ibm.wala.classLoader.IClass
 import com.ibm.wala.ipa.cha.IClassHierarchy
@@ -27,7 +27,7 @@ object CHAUtil {
   // this is complicated because covariance in return type is allowed (for all methods), and covariance in parameter types
   // may occur due to the way that generic methods are represented in the bytecode. since we don't have generics in the bytecode,
   // it's not always possible do determine if one method definitely overrides another. we err on the side of reporting overides
-  def mayOverride(method : IMethod, c : IClass, cha : IClassHierarchy) : Boolean = c.getDeclaredMethods().exists(m => 
+  def mayOverride(method : IMethod, c : IClass, cha : IClassHierarchy) : Boolean = c.getDeclaredMethods().asScala.exists(m =>
     m.getSelector() == method.getSelector() || 
       (m.getName() == method.getName() && m.getNumberOfParameters() == method.getNumberOfParameters() && 
       isAssignableFrom(m.getReturnType(), method.getReturnType(), cha) && // check that return types are covariant
@@ -44,7 +44,7 @@ object CHAUtil {
     require(declClass.getDeclaredMethods().contains(method))  
     
     // get interfaces declaring method
-    val declInterfaces = declClass.getAllImplementedInterfaces().toSet.filter(i => mayOverride(method, i, cha))
+    val declInterfaces = declClass.getAllImplementedInterfaces().asScala.toSet.filter(i => mayOverride(method, i, cha))
     
     // find superclass highest in the type hierarchy declaring method. need to do this in addition to the interface
     // check because a class can implement multiple interfaces (or implement an interface and extend a class)

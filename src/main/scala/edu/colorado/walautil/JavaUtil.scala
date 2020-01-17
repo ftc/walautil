@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream, FileOutputStream, InputStream, OutputStre
 import java.util.jar.{JarEntry, JarFile, JarOutputStream}
 import javax.tools.{DiagnosticCollector, JavaFileObject, ToolProvider}
 
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 
 object JavaUtil {
   
@@ -20,10 +20,10 @@ object JavaUtil {
       "Can't find the Java compiler; JAVA_HOME is " + System.getProperty("java.home") + "-- are you using a JRE instead of a JDK?")
     val diagnostics = new DiagnosticCollector[JavaFileObject]
     val fileMgr = compiler.getStandardFileManager(diagnostics, null, null)
-    val compilationUnits = fileMgr.getJavaFileObjectsFromStrings(asJavaCollection(classes.map(_ + ".java")))    
-    val task = compiler.getTask(null, fileMgr, diagnostics, asJavaIterable(newOptions), null, compilationUnits)
+    val compilationUnits = fileMgr.getJavaFileObjectsFromStrings(classes.map(_ + ".java").asJava)
+    val task = compiler.getTask(null, fileMgr, diagnostics, newOptions.asJava, null, compilationUnits)
     val res : Boolean = task.call()
-    if (printFailureDiagnostics && !res) diagnostics.getDiagnostics().foreach(d => println(d)) 
+    if (printFailureDiagnostics && !res) diagnostics.getDiagnostics().asScala.foreach(d => println(d))
     res
   }
   
@@ -85,7 +85,7 @@ object JavaUtil {
     
     val jars = jarFiles.map(f => new JarFile(f))
     jars.foldLeft (Set.empty[String]) ((added, jar) => {
-      jar.entries().foldLeft (added) ((added, e) => {
+      jar.entries().asScala.foldLeft (added) ((added, e) => {
         val newAdded = added + e.getName()
         if (newAdded.size != added.size) writeEntry(new JarEntry(e.getName), jar.getInputStream(e), jarStream)
         else if (duplicateWarning && !e.isDirectory()) println(s"Duplicate entry $e; not adding")

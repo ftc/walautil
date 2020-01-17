@@ -4,7 +4,8 @@ version := "0.1-SNAPSHOT"
 
 organization := "edu.colorado.plv"
 
-scalaVersion := "2.10.2"
+//scalaVersion := "2.11.11"
+scalaVersion := "2.13.1"
 
 offline := true
 

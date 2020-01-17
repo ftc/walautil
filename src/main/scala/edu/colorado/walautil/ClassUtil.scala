@@ -1,6 +1,6 @@
 package edu.colorado.walautil
 
-import scala.collection.JavaConversions._
+import scala.jdk.CollectionConverters._
 import com.ibm.wala.classLoader.{IClass, IField, IMethod}
 import com.ibm.wala.ipa.callgraph.CGNode
 import com.ibm.wala.ipa.callgraph.propagation.{AllocationSiteInNode, InstanceKey}
@@ -92,7 +92,7 @@ object ClassUtil {
   /** @return all of the inner classes of @param c in @param cha */
   def getInnerClasses(c : IClass, cha : IClassHierarchy) : Iterable[IClass] = {
     val innerClassPrefix = c.getName.toString + "$"
-    cha.filter(c => c.getName.toString.startsWith(innerClassPrefix))
+    cha.asScala.filter(c => c.getName.toString.startsWith(innerClassPrefix))
   }
 
   // bytecodes expect a semicolon after a type; add it

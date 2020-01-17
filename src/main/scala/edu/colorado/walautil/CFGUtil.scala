@@ -1,5 +1,7 @@
 package edu.colorado.walautil
 
+import java.util
+
 import com.ibm.wala.ipa.callgraph.{CGNode, CallGraph}
 import com.ibm.wala.ipa.cfg.{EdgeFilter, PrunedCFG}
 import com.ibm.wala.ipa.cha.IClassHierarchy
@@ -11,9 +13,7 @@ import com.ibm.wala.util.graph.traverse.{BFSPathFinder, DFS}
 import com.ibm.wala.util.graph.{Acyclic, Graph, NumberedGraph}
 import edu.colorado.walautil.Types._
 
-
-import scala.collection.JavaConversions._
-
+import scala.jdk.CollectionConverters._
 
 object CFGUtil {
   
@@ -52,7 +52,7 @@ object CFGUtil {
   def getPredsWhile(startBlk : WalaBlock, cfg : SSACFG, test : WalaBlock => Boolean,
                     startSet : Set[ISSABasicBlock] = Set.empty[WalaBlock], inclusive : Boolean = false,
                     exceptional : Boolean = false) : Set[WalaBlock] =
-    getWhile((cfg, blk) => (if (exceptional) cfg.getPredNodes(blk).toList else cfg.getNormalPredecessors(blk).toList).toSet,
+    getWhile((cfg, blk) => (if (exceptional) cfg.getPredNodes(blk).asScala.toList else cfg.getNormalPredecessors(blk).asScala.toList).toSet,
              startBlk, startSet, cfg, test, inclusive)
 
   def getFallThroughBlocks(startBlk : WalaBlock, cfg : SSACFG, inclusive : Boolean = false, test : WalaBlock => Boolean =_ => true) : Set[WalaBlock] = {
@@ -165,11 +165,11 @@ object CFGUtil {
 
   /** @return true if @param b is a block containing a conditional or switch instruction */
   def isConditionalBlock(b : ISSABasicBlock) : Boolean =
-    b.exists(i => i.isInstanceOf[SSAConditionalBranchInstruction] || i.isInstanceOf[SSASwitchInstruction])
+    b.asScala.exists(i => i.isInstanceOf[SSAConditionalBranchInstruction] || i.isInstanceOf[SSASwitchInstruction])
 
   def getCatchBlocks(cfg : SSACFG) : Iterable[ISSABasicBlock] =
     // we could use cfg.getCatchBlocks(), but it returns a bitvector that is a pain to iterate over
-    cfg.filter(blk => blk.isCatchBlock())
+    cfg.asScala.filter(blk => blk.isCatchBlock())
 
   /**
    * @return true if a catch block falls through to @param snk
@@ -191,7 +191,7 @@ object CFGUtil {
     intraProcCheck(startBlk, n.getIR.getControlFlowGraph) || {
       // ...or interprocedurally at each caller
       def extendWorklistWithPreds(n: CGNode, worklist : List[(CGNode,CGNode)]) : List[(CGNode,CGNode)] =
-        cg.getPredNodes(n).filter(n => cgNodeFilter(n))
+        cg.getPredNodes(n).asScala.filter(n => cgNodeFilter(n))
                           .foldLeft (worklist) ((worklist, caller) => (caller, n) :: worklist)
 
       @annotation.tailrec
@@ -206,7 +206,7 @@ object CFGUtil {
               val protectedAtAllCallSites = {
                 val siteBlks =
                   // check true if it is true for all calls to callee in caller
-                  cg.getPossibleSites(caller, callee).foldLeft(Set.empty[ISSABasicBlock])((siteBlks, site) =>
+                  cg.getPossibleSites(caller, callee).asScala.foldLeft(Set.empty[ISSABasicBlock])((siteBlks, site) =>
                     siteBlks ++ ir.getBasicBlocksForCall(site))
                 siteBlks.forall(blk => intraProcCheck(blk, cfg))
               }
@@ -227,8 +227,8 @@ object CFGUtil {
   def isProtectedByCatchBlockIntraprocedural(blk : ISSABasicBlock, cfg : SSACFG, exc : TypeReference,
                                              cha : IClassHierarchy) : Boolean = {
     val excClass = cha.lookupClass(exc)
-    cfg.getExceptionalSuccessors(blk).exists(b => b.isCatchBlock && {
-      b.getCaughtExceptionTypes.exists(t => {
+    cfg.getExceptionalSuccessors(blk).asScala.exists(b => b.isCatchBlock && {
+      b.getCaughtExceptionTypes.asScala.exists(t => {
         val caughtExc = cha.lookupClass(t)
         cha.isAssignableFrom(caughtExc, excClass)
       })
@@ -246,14 +246,14 @@ object CFGUtil {
   /** @return true if @param startBlk is lexically enclosed in a try block in the IR for @param n */
   def isInTryBlockIntraprocedural(startBlk : ISSABasicBlock, cfg : SSACFG) : Boolean = {
 
-    cfg.exists(blk => blk.isCatchBlock) && {
+    cfg.asScala.exists(blk => blk.isCatchBlock) && {
       val bwReachable = getBackwardReachableFrom(startBlk, cfg, inclusive = true)
       // get back edge-free view of CFG
       val cfgWithoutBackEdges = getBackEdgePrunedCFG(cfg)
       // startBlk is in a catch block if one of its predecessor instructions transitions to a catch block and no paths
       // exist from from the catch block to startBlk without traversing a back edge. if such a path exists, the try
       // block precedes startBlk rather than enclosing it
-      bwReachable.exists(blk => cfg.getExceptionalSuccessors(blk).exists(blk =>
+      bwReachable.exists(blk => cfg.getExceptionalSuccessors(blk).asScala.exists(blk =>
         blk.isCatchBlock && !isReachableFrom(startBlk, blk, cfgWithoutBackEdges)))
     }
   }
@@ -273,7 +273,7 @@ object CFGUtil {
     // reachability check. this code is fine for a boolean check like this procedure because we'll always report the
     // loop conditional as dominating
     bwReachable.exists(blk => isConditionalBlock(blk) &&
-                              cfg.getSuccNodes(blk).exists(blk => !bwReachable.contains(blk)))
+                              cfg.getSuccNodes(blk).asScala.exists(blk => !bwReachable.contains(blk)))
   }
 
   def isInConditionalInterprocedural(blk : ISSABasicBlock, n : CGNode, cg : CallGraph,
@@ -287,14 +287,15 @@ object CFGUtil {
    * a successor of "blk(v1 = new Exception)". This method is meant to correct this
    */
   def getSuccessors(blk : WalaBlock, cfg : SSACFG) = {
-    cfg.getExceptionalSuccessors(blk).foldLeft (cfg.getNormalSuccessors(blk).toList) ((lst, succ) => {
+    val blocks = cfg.getExceptionalSuccessors(blk).asScala.toList
+    blocks.foldLeft (cfg.getNormalSuccessors(blk).asScala.toList) ((lst, succ:WalaBlock) => {
       if (endsWithThrowInstr(succ) && !succ.isCatchBlock()) succ :: lst
       else lst
     })
   }
       
   def getNormalPredecessors(blk : WalaBlock, cfg : SSACFG) : Iterable[WalaBlock] = 
-    cfg.getNormalPredecessors(blk)
+    cfg.getNormalPredecessors(blk).asScala
       
   def getThenBranch(blk : ISSABasicBlock, cfg : SSACFG) = getSuccessors(blk, cfg)(0)
   
@@ -329,7 +330,7 @@ object CFGUtil {
     val startBlk = ir.getBasicBlockForInstruction(i)
     if (startBlk == null) None
     else
-      startBlk.asInstanceOf[SSACFG#BasicBlock].getAllInstructions.zipWithIndex.find(pair => pair._1 == i) match {
+      startBlk.asInstanceOf[SSACFG#BasicBlock].getAllInstructions.asScala.zipWithIndex.find(pair => pair._1 == i) match {
         case Some((_, index)) => Some(startBlk, index)
         case None => None
       }
@@ -356,7 +357,7 @@ object CFGUtil {
       val succs = g.getSuccNodes(src)
       while (succs.hasNext()) srcs.add(succs.next())
     }
-    DFS.getReachableNodes(g, srcs).toList
+    DFS.getReachableNodes(g, srcs).asScala.toList
   }
 
   /** @return a view of @param cfg with all back edges removed */
@@ -367,7 +368,7 @@ private final class BackEdgePruner(cfg : SSACFG) extends EdgeFilter[ISSABasicBlo
   val backEdges = Acyclic.computeBackEdges(cfg, cfg.entry())
 
   override def hasNormalEdge(src : ISSABasicBlock, dst : ISSABasicBlock) : Boolean =
-    cfg.getNormalSuccessors(src).toList.filter(blk => !backEdges.contains(src.getNumber, blk.getNumber)).contains(dst)
+    cfg.getNormalSuccessors(src).asScala.toList.filter(blk => !backEdges.contains(src.getNumber, blk.getNumber)).contains(dst)
 
   override def hasExceptionalEdge(src : ISSABasicBlock, dst : ISSABasicBlock) : Boolean =
     cfg.getExceptionalSuccessors(src).contains(dst)
